@@ -19,7 +19,7 @@ SOURCES = $(shell find $(SRC_DIR) -name '*.c')
 OBJECTS = $(patsubst %.c, $(OBJ_DIR)/%.o, $(SOURCES))
 
 # Target executable
-TARGET = $(BIN_DIR)/byzantine_system
+TARGET = $(BIN_DIR)/distributor
 
 # Default target
 all: $(TARGET)
