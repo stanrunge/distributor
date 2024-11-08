@@ -140,10 +140,26 @@ int send_http_response(int client_socket, const char *filepath) {
 void *handle_client(void *arg) {
   int client_socket = *(int *)arg;
   free(arg);
+
+  char buffer[BUFFER_SIZE];
+  int read_bytes = recv(client_socket, buffer, BUFFER_SIZE - 1, 0);
+  if (read_bytes <= 0) {
+    perror("Failed to read from socket");
+    close(client_socket);
+    pthread_exit(NULL);
+  }
+
+  buffer[read_bytes] = '\0';
+  printf("Received request:\n%s\n", buffer);
+
+  send_http_response(client_socket, "src/web/index.html");
+
+  close(client_socket);
+  pthread_exit(NULL);
 }
 
 static void *web_server_thread(void *arg) {
-  int server_fd, new_socket;
+  int new_socket;
   struct sockaddr_in address;
   int opt = 1;
   socklen_t addrlen = sizeof(address);
@@ -178,6 +194,12 @@ static void *web_server_thread(void *arg) {
     pthread_exit(NULL);
   }
 
+  if (listen(server_fd, 3) < 0) {
+    perror("listen failed");
+    close(server_fd);
+    pthread_exit(NULL);
+  }
+
   printf("Listening on port 8080\n");
 
   while (1) {
@@ -196,7 +218,18 @@ static void *web_server_thread(void *arg) {
       continue;
     }
 
-    pthread_detach(server_thread);
+    *client_socket = new_socket;
+
+    pthread_t client_thread;
+    if (pthread_create(&client_thread, NULL, handle_client, client_socket) !=
+        0) {
+      perror("Failed to create client thread");
+      free(client_socket);
+      close(new_socket);
+      continue;
+    }
+
+    pthread_detach(client_thread);
   }
 
   close(server_fd);
