@@ -1,3 +1,4 @@
+#include "p2p/p2p.h"
 #include "web/server.h"
 #include <arpa/inet.h>
 #include <pthread.h>
@@ -13,9 +14,10 @@ int main() {
     exit(EXIT_FAILURE);
   }
 
-  //  init_socket();
-
-  //  show_intro();
+  if (start_p2p_server() != 0) {
+    fprintf(stderr, "Failed to start P2P server\n");
+    exit(EXIT_FAILURE);
+  }
 
   while (1) {
     char command[100];

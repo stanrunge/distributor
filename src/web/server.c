@@ -37,7 +37,7 @@ int start_web_server() {
   }
 
   pthread_detach(server_thread);
-  printf("Server started\n");
+  printf("Web Server started\n");
   return 0;
 }
 
