@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/_endian.h>
+#include <endian.h>
 #include <sys/socket.h>
 #include <sys/stat.h> // for file statistics
 #include <sys/types.h>
@@ -23,14 +23,17 @@ static char *construct_http_response(const char *content, long content_length,
                                      const char *status);
 static int send_http_response(int client_socket, const char *filepath);
 
-int start_web_server() {
-  if (server_running) {
+int start_web_server()
+{
+  if (server_running)
+  {
     fprintf(stderr, "Server is already running\n");
     return -1;
   }
 
   server_running = 1;
-  if (pthread_create(&server_thread, NULL, web_server_thread, NULL) != 0) {
+  if (pthread_create(&server_thread, NULL, web_server_thread, NULL) != 0)
+  {
     perror("Failed to create server thread");
     server_running = 0;
     return -1;
@@ -41,9 +44,11 @@ int start_web_server() {
   return 0;
 }
 
-char *read_file(const char *filepath, long *out_size) {
+char *read_file(const char *filepath, long *out_size)
+{
   FILE *file = fopen(filepath, "rb");
-  if (!file) {
+  if (!file)
+  {
     perror("Failed to open file");
     return NULL;
   }
@@ -53,14 +58,16 @@ char *read_file(const char *filepath, long *out_size) {
   rewind(file);
 
   char *buffer = malloc(size + 1);
-  if (!buffer) {
+  if (!buffer)
+  {
     perror("Failed to allocate memory");
     fclose(file);
     return NULL;
   }
 
   size_t read = fread(buffer, 1, size, file);
-  if (read != size) {
+  if (read != size)
+  {
     perror("Failed to read file");
     fclose(file);
     free(buffer);
@@ -69,7 +76,8 @@ char *read_file(const char *filepath, long *out_size) {
 
   buffer[size] = '\0';
 
-  if (out_size) {
+  if (out_size)
+  {
     *out_size = size;
   }
 
@@ -78,7 +86,8 @@ char *read_file(const char *filepath, long *out_size) {
 }
 
 char *construct_http_response(const char *content, long content_length,
-                              const char *status) {
+                              const char *status)
+{
   const char *header_template = "HTTP/1.1 %s \r\n"
                                 "Content-Type: text/html\r\n"
                                 "Content-Length: %ld\r\n"
@@ -87,7 +96,8 @@ char *construct_http_response(const char *content, long content_length,
 
   size_t header_size = strlen(header_template) + strlen(status) + 20;
   char *header = malloc(header_size);
-  if (!header) {
+  if (!header)
+  {
     perror("Failed to allocate memory");
     return NULL;
   }
@@ -96,7 +106,8 @@ char *construct_http_response(const char *content, long content_length,
 
   size_t total_size = strlen(header) + content_length + 1;
   char *response = malloc(total_size);
-  if (!response) {
+  if (!response)
+  {
     perror("Failed to allocate memory");
     free(header);
     return NULL;
@@ -109,10 +120,12 @@ char *construct_http_response(const char *content, long content_length,
   return response;
 }
 
-int send_http_response(int client_socket, const char *filepath) {
+int send_http_response(int client_socket, const char *filepath)
+{
   long file_size;
   char *file_content = read_file(filepath, &file_size);
-  if (!file_content) {
+  if (!file_content)
+  {
     const char *not_found = "<!DOCTYPE html>"
                             "<html>"
                             "<head><title>404 Not Found</title></head>"
@@ -120,7 +133,8 @@ int send_http_response(int client_socket, const char *filepath) {
 
     char *response =
         construct_http_response(not_found, strlen(not_found), "404 Not Found");
-    if (response) {
+    if (response)
+    {
 
       send(client_socket, response, strlen(response), 0);
       free(response);
@@ -129,7 +143,8 @@ int send_http_response(int client_socket, const char *filepath) {
   }
 
   char *response = construct_http_response(file_content, file_size, "200 OK");
-  if (response) {
+  if (response)
+  {
     send(client_socket, response, strlen(response), 0);
     free(response);
   }
@@ -137,7 +152,8 @@ int send_http_response(int client_socket, const char *filepath) {
   return 0;
 }
 
-int send_json_response(int client_socket, const char *json_data) {
+int send_json_response(int client_socket, const char *json_data)
+{
   const char *header_template = "HTTP/1.1 200 OK\r\n"
                                 "Content-Type: application/json\r\n"
                                 "Content-Length: %ld\r\n"
@@ -145,14 +161,16 @@ int send_json_response(int client_socket, const char *json_data) {
                                 "\r\n";
   size_t header_size = strlen(header_template) + 20;
   char *header = malloc(header_size);
-  if (!header) {
+  if (!header)
+  {
     perror("Failed to allocate memory");
     return -1;
   }
   sprintf(header, header_template, strlen(json_data));
   size_t total_size = strlen(header) + strlen(json_data) + 1;
   char *response = malloc(total_size);
-  if (!response) {
+  if (!response)
+  {
     perror("Failed to allocate memory");
     free(header);
     return -1;
@@ -165,8 +183,10 @@ int send_json_response(int client_socket, const char *json_data) {
   return 0;
 }
 
-void handle_client_request(int client_socket, const char *request) {
-  if (strstr(request, "GET /api/network") == request) {
+void handle_client_request(int client_socket, const char *request)
+{
+  if (strstr(request, "GET /api/network") == request)
+  {
     const char *json_response =
         "{"
         "  \"nodes\": ["
@@ -185,19 +205,22 @@ void handle_client_request(int client_socket, const char *request) {
         "}";
 
     send_json_response(client_socket, json_response);
-
-  } else {
-    send_http_response(client_socket, "src/web/index.html");
+  }
+  else
+  {
+    send_http_response(client_socket, "public/index.html");
   }
 }
 
-void *handle_client(void *arg) {
+void *handle_client(void *arg)
+{
   int client_socket = *(int *)arg;
   free(arg);
 
   char buffer[BUFFER_SIZE];
   int read_bytes = recv(client_socket, buffer, BUFFER_SIZE - 1, 0);
-  if (read_bytes <= 0) {
+  if (read_bytes <= 0)
+  {
     perror("Failed to read from socket");
     close(client_socket);
     pthread_exit(NULL);
@@ -208,31 +231,35 @@ void *handle_client(void *arg) {
 
   handle_client_request(client_socket, buffer);
 
-  send_http_response(client_socket, "src/web/index.html");
+  send_http_response(client_socket, "public/index.html");
 
   close(client_socket);
   pthread_exit(NULL);
 }
 
-static void *web_server_thread(void *arg) {
+static void *web_server_thread(void *arg)
+{
   int new_socket;
   struct sockaddr_in address;
   int opt = 1;
   socklen_t addrlen = sizeof(address);
 
-  if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
+  if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0)
+  {
     perror("socket failed");
     pthread_exit(NULL);
   }
 
-  if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt))) {
+  if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)))
+  {
     perror("setsockopt failed");
     close(server_fd);
     pthread_exit(NULL);
   }
 
 #ifdef SO_REUSEPORT
-  if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt))) {
+  if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)))
+  {
     perror("setsockopt failed");
     close(server_fd);
     pthread_exit(NULL);
@@ -244,13 +271,15 @@ static void *web_server_thread(void *arg) {
   address.sin_addr.s_addr = INADDR_ANY;
   address.sin_port = htons(8080);
 
-  if (bind(server_fd, (struct sockaddr *)&address, sizeof(address)) < 0) {
+  if (bind(server_fd, (struct sockaddr *)&address, sizeof(address)) < 0)
+  {
     perror("bind failed");
     close(server_fd);
     pthread_exit(NULL);
   }
 
-  if (listen(server_fd, 3) < 0) {
+  if (listen(server_fd, 3) < 0)
+  {
     perror("listen failed");
     close(server_fd);
     pthread_exit(NULL);
@@ -258,9 +287,11 @@ static void *web_server_thread(void *arg) {
 
   printf("Listening on port 8080\n");
 
-  while (1) {
+  while (1)
+  {
     new_socket = accept(server_fd, (struct sockaddr *)&address, &addrlen);
-    if (new_socket < 0) {
+    if (new_socket < 0)
+    {
       perror("Accept failed");
     }
 
@@ -268,7 +299,8 @@ static void *web_server_thread(void *arg) {
            ntohs(address.sin_port));
 
     int *client_socket = malloc(sizeof(int));
-    if (!client_socket) {
+    if (!client_socket)
+    {
       perror("Failed to allocate memory for client socket");
       close(new_socket);
       continue;
@@ -278,7 +310,8 @@ static void *web_server_thread(void *arg) {
 
     pthread_t client_thread;
     if (pthread_create(&client_thread, NULL, handle_client, client_socket) !=
-        0) {
+        0)
+    {
       perror("Failed to create client thread");
       free(client_socket);
       close(new_socket);

@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/_endian.h>
+#include <endian.h>
 #include <sys/socket.h>
 #include <sys/stat.h> // for file statistics
 #include <sys/types.h>
