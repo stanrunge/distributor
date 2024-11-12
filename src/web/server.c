@@ -137,6 +137,60 @@ int send_http_response(int client_socket, const char *filepath) {
   return 0;
 }
 
+int send_json_response(int client_socket, const char *json_data) {
+  const char *header_template = "HTTP/1.1 200 OK\r\n"
+                                "Content-Type: application/json\r\n"
+                                "Content-Length: %ld\r\n"
+                                "Connection: close\r\n"
+                                "\r\n";
+  size_t header_size = strlen(header_template) + 20;
+  char *header = malloc(header_size);
+  if (!header) {
+    perror("Failed to allocate memory");
+    return -1;
+  }
+  sprintf(header, header_template, strlen(json_data));
+  size_t total_size = strlen(header) + strlen(json_data) + 1;
+  char *response = malloc(total_size);
+  if (!response) {
+    perror("Failed to allocate memory");
+    free(header);
+    return -1;
+  }
+  strcpy(response, header);
+  strcat(response, json_data);
+  send(client_socket, response, strlen(response), 0);
+  free(header);
+  free(response);
+  return 0;
+}
+
+void handle_client_request(int client_socket, const char *request) {
+  if (strstr(request, "GET /api/network") == request) {
+    const char *json_response =
+        "{"
+        "  \"nodes\": ["
+        "    {\"id\": 1, \"name\": \"Node 1\", \"connections\": [{\"id\": 2}, "
+        "{\"id\": 3}]},"
+        "    {\"id\": 2, \"name\": \"Node 2\", \"connections\": [{\"id\": 1}, "
+        "{\"id\": 4}, {\"id\": 5}]},"
+        "    {\"id\": 3, \"name\": \"Node 3\", \"connections\": [{\"id\": 1}, "
+        "{\"id\": 6}]},"
+        "    {\"id\": 4, \"name\": \"Node 4\", \"connections\": [{\"id\": 2}]},"
+        "    {\"id\": 5, \"name\": \"Node 5\", \"connections\": [{\"id\": 2}, "
+        "{\"id\": 6}]},"
+        "    {\"id\": 6, \"name\": \"Node 6\", \"connections\": [{\"id\": 3}, "
+        "{\"id\": 5}]}"
+        "  ]"
+        "}";
+
+    send_json_response(client_socket, json_response);
+
+  } else {
+    send_http_response(client_socket, "src/web/index.html");
+  }
+}
+
 void *handle_client(void *arg) {
   int client_socket = *(int *)arg;
   free(arg);
@@ -151,6 +205,8 @@ void *handle_client(void *arg) {
 
   buffer[read_bytes] = '\0';
   printf("Received request:\n%s\n", buffer);
+
+  handle_client_request(client_socket, buffer);
 
   send_http_response(client_socket, "src/web/index.html");
 

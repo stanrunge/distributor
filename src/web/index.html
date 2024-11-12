@@ -1,18 +1,103 @@
 <!doctype html>
 <html>
-  <head>
-    <title>The Distributor</title>
 
-    <style>
-      html {
-        background-color: #000;
-        color: #fff;
+<head>
+  <title>The Distributor</title>
+
+  <style>
+    html {
+      background-color: #000;
+      color: #fff;
+    }
+  </style>
+</head>
+
+<body style="display: flex; flex-direction: column; align-items: center">
+  <h1>The Distributor</h1>
+  <p>Current nodes: 1</p>
+
+  <canvas id="network" width="800" height="600"></canvas>
+
+  <a href="https://github.com/stanrunge/distributor" style="margin: 3em">GitHub</a>
+
+  <script>
+    function fetchNetworkData() {
+      fetch("/api/network")
+        .then((res) => res.json())
+        .then((network) => {
+          drawNetwork(network);
+        });
+    }
+
+    function drawNetwork({nodes}) {
+      const canvas = document.getElementById("network");
+      if (!canvas) {
+        console.error("Canvas element with id 'network' not found.");
+        return;
       }
-    </style>
-  </head>
+      const ctx = canvas.getContext("2d");
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  <body>
-    <h1>The Distributor</h1>
-    <p>Current nodes: 1</p>
-  </body>
+      const centerX = canvas.width / 2;
+      const centerY = canvas.height / 2;
+      const radius = Math.min(centerX, centerY) - 50;
+      const angleStep = (2 * Math.PI) / nodes.length;
+
+      // Assign positions to each node
+      nodes.forEach((node, i) => {
+        const angle = i * angleStep;
+        node.x = centerX + radius * Math.cos(angle);
+        node.y = centerY + radius * Math.sin(angle);
+      });
+
+      // Collect unique edges to prevent duplicate lines
+      const edges = [];
+      const edgeSet = new Set(); // To track unique edges
+
+      nodes.forEach((node) => {
+        node.connections.forEach((conn) => {
+          // Create a unique key for each edge (sorted to avoid duplicates)
+          const edgeKey = [node.id, conn.id].sort().join("-");
+          if (!edgeSet.has(edgeKey)) {
+            edgeSet.add(edgeKey);
+            edges.push({from: node.id, to: conn.id});
+          }
+        });
+      });
+
+      // Draw edges
+      ctx.strokeStyle = "#888";
+      edges.forEach((edge) => {
+        const fromNode = nodes.find((node) => node.id === edge.from);
+        const toNode = nodes.find((node) => node.id === edge.to);
+        if (fromNode && toNode) {
+          ctx.beginPath();
+          ctx.moveTo(fromNode.x, fromNode.y);
+          ctx.lineTo(toNode.x, toNode.y);
+          ctx.stroke();
+        }
+      });
+
+      // Draw nodes
+      nodes.forEach((node) => {
+        // Draw node circle
+        ctx.beginPath();
+        ctx.arc(node.x, node.y, 15, 0, 2 * Math.PI);
+        ctx.fillStyle = "#fff";
+        ctx.fill();
+        ctx.strokeStyle = "#000";
+        ctx.stroke();
+
+        // Draw node label
+        ctx.fillStyle = "#000";
+        ctx.font = "12px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(node.id, node.x, node.y + 5);
+      });
+    }
+
+    setInterval(fetchNetworkData, 5000);
+  </script>
+</body>
+
 </html>
