@@ -9,6 +9,7 @@ services:
       - "traefik.http.routers.distributor.entrypoints=web,websecure"
       - "traefik.http.routers.distributor.tls.certresolver=myresolver"
       - "traefik.http.services.distributor.loadbalancer.server.port=8080"
+    restart: unless-stopped
     networks:
       distributor_net:
         ipv4_address: 172.16.238.10
@@ -16,6 +17,7 @@ services:
 
   node-2:
     build: .
+    restart: unless-stopped
     networks:
       distributor_net:
         ipv4_address: 172.16.238.11
@@ -23,6 +25,7 @@ services:
 
   node-3:
     build: .
+    restart: unless-stopped
     networks:
       distributor_net:
         ipv4_address: 172.16.238.12
